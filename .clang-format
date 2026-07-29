@@ -1,0 +1,41 @@
+---
+BasedOnStyle: LLVM
+Language: Cpp
+Standard: c++20
+
+IndentWidth: 2
+ColumnLimit: 100
+UseTab: Never
+
+AccessModifierOffset: -2
+NamespaceIndentation: None
+AlignAfterOpenBracket: Align
+AllowShortFunctionsOnASingleLine: Inline
+AllowShortIfStatementsOnASingleLine: false
+AllowShortLoopsOnASingleLine: false
+BinPackArguments: false
+BinPackParameters: false
+BreakBeforeBraces: Attach
+ConstructorInitializerIndentWidth: 2
+ContinuationIndentWidth: 4
+Cpp11BracedListStyle: true
+DerivePointerAlignment: false
+PointerAlignment: Left
+ReferenceAlignment: Left
+FixNamespaceComments: true
+IncludeBlocks: Regroup
+IncludeCategories:
+  - Regex: '^<[a-z_]+>'
+    Priority: 1
+  - Regex: '^<.*\.hh?>'
+    Priority: 2
+  - Regex: '^".*"'
+    Priority: 3
+IndentCaseLabels: true
+IndentPPDirectives: None
+KeepEmptyLinesAtTheStartOfBlocks: false
+MaxEmptyLinesToKeep: 1
+SortIncludes: CaseSensitive
+SpaceAfterCStyleCast: true
+SpaceBeforeParens: ControlStatements
+SpacesInAngles: false

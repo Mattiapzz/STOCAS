@@ -1,0 +1,43 @@
+---
+# Moderate profile per CLAUDE.md §10: curated check set, NOT
+# warnings-as-errors by default (that's opt-in per-project later).
+Checks: >
+  -*,
+  bugprone-*,
+  performance-*,
+  modernize-*,
+  readability-*,
+  -modernize-use-trailing-return-type,
+  -readability-identifier-length,
+  -readability-magic-numbers,
+  -bugprone-easily-swappable-parameters
+
+WarningsAsErrors: ''
+HeaderFilterRegex: '^.*/(src|include)/.*'
+FormatStyle: file
+
+CheckOptions:
+  - key: readability-identifier-naming.NamespaceCase
+    value: lower_case
+  - key: readability-identifier-naming.ClassCase
+    value: CamelCase
+  - key: readability-identifier-naming.StructCase
+    value: CamelCase
+  - key: readability-identifier-naming.EnumCase
+    value: CamelCase
+  - key: readability-identifier-naming.FunctionCase
+    value: lower_case
+  - key: readability-identifier-naming.VariableCase
+    value: lower_case
+  - key: readability-identifier-naming.PrivateMemberSuffix
+    value: '_'
+  - key: readability-identifier-naming.ProtectedMemberSuffix
+    value: '_'
+  - key: readability-identifier-naming.ConstantCase
+    value: CamelCase
+  - key: readability-identifier-naming.ConstantPrefix
+    value: 'k'
+  - key: readability-identifier-naming.TemplateParameterCase
+    value: CamelCase
+  - key: readability-identifier-naming.MacroDefinitionCase
+    value: UPPER_CASE
