@@ -1,6 +1,6 @@
 # src/numerica_core/CMakeLists.txt
 
-add_library(numerica_core big_int.cc)
+add_library(numerica_core big_int.cc rational.cc)
 add_library(stocas::numerica_core ALIAS numerica_core)
 
 target_include_directories(
