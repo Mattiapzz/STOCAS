@@ -20,3 +20,15 @@ if(STOCAS_BUILD_TESTS)
   list(APPEND CMAKE_MODULE_PATH "${catch2_SOURCE_DIR}/extras")
   include(CTest)
 endif()
+
+# GMP - arbitrary-precision integer arithmetic, needed by numerica_core's
+# BigInt (M1-T1). LGPLv3+/GPLv2+ dual-licensed; this project links it
+# dynamically (LGPL-compatible path), per CLAUDE.md §7 and the roadmap's
+# pre-approved dependency table.
+#
+# find_package-first (CLAUDE.md §7): GMP has no CMake-native build system
+# (autotools), so a FetchContent-built fallback is impractical to keep
+# portable across all three CI platforms. Require a system-installed GMP
+# (e.g. `brew install gmp` / `apt install libgmp-dev` / vcpkg on Windows)
+# instead of vendoring a build.
+find_package(GMP REQUIRED)
