@@ -13,6 +13,7 @@ include(Dependencies.cmake)
 
 if(STOCAS_BUILD_TESTS)
   enable_testing()
+  include(cmake/CatchHelpers.cmake)
 endif()
 
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/src/CMakeLists.txt")
