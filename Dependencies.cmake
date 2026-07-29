@@ -6,7 +6,17 @@
 # "Third-party dependencies" table may be added without asking the
 # project owner first.
 #
-# Empty for now (M0-T1) - the Catch2 FetchContent_Declare entry and CTest
-# wiring land in M0-T2.
-
 include(FetchContent)
+
+if(STOCAS_BUILD_TESTS)
+  # Catch2 v3 - unit/property/templated testing, used by all modules' test/.
+  # Pinned tag: v3.7.1. Needed for every Catch2 test binary in test/<module>/.
+  FetchContent_Declare(
+    Catch2
+    GIT_REPOSITORY https://github.com/catchorg/Catch2.git
+    GIT_TAG v3.7.1)
+  FetchContent_MakeAvailable(Catch2)
+
+  list(APPEND CMAKE_MODULE_PATH "${catch2_SOURCE_DIR}/extras")
+  include(CTest)
+endif()
