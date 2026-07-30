@@ -32,3 +32,8 @@ endif()
 # (e.g. `brew install gmp` / `apt install libgmp-dev` / vcpkg on Windows)
 # instead of vendoring a build.
 find_package(GMP REQUIRED)
+
+# MPFR - arbitrary-precision floating point, needed by numerica_core's
+# Float (M1-T4). LGPLv3+, depends on GMP; same find_package-first
+# rationale and dynamic-linking note as GMP above.
+find_package(MPFR REQUIRED)

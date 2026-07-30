@@ -3,7 +3,8 @@
 # Placeholder module (M0-T4) validating the standard module shape before
 # it's cloned for real modules (CLAUDE.md §1/§6).
 
-add_library(hello_core greeter.cc)
+file(GLOB hello_core_sources CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/*.cc")
+add_library(hello_core ${hello_core_sources})
 add_library(stocas::hello_core ALIAS hello_core)
 
 target_include_directories(
