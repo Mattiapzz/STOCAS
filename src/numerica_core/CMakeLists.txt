@@ -1,6 +1,7 @@
 # src/numerica_core/CMakeLists.txt
 
-add_library(numerica_core big_int.cc rational.cc)
+file(GLOB numerica_core_sources CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/*.cc")
+add_library(numerica_core ${numerica_core_sources})
 add_library(stocas::numerica_core ALIAS numerica_core)
 
 target_include_directories(
@@ -14,8 +15,8 @@ target_compile_features(numerica_core PUBLIC cxx_std_20)
 # non-exported dependencies to keep it out of numerica_coreTargets.cmake.
 target_link_libraries(
   numerica_core
-  PRIVATE $<BUILD_INTERFACE:GMP::GMP> $<BUILD_INTERFACE:stocas::project_options>
-          $<BUILD_INTERFACE:stocas::sanitizers>)
+  PRIVATE $<BUILD_INTERFACE:GMP::GMP> $<BUILD_INTERFACE:MPFR::MPFR>
+          $<BUILD_INTERFACE:stocas::project_options> $<BUILD_INTERFACE:stocas::sanitizers>)
 
 include(GNUInstallDirs)
 install(TARGETS numerica_core EXPORT numerica_coreTargets)
