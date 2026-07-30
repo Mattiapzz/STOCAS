@@ -138,8 +138,26 @@ bool mul_overflows(int64_t a, int64_t b) {
   if (a == 0 || b == 0) {
     return false;
   }
-  const int64_t result = a * b;
-  return result / b != a;
+#if defined(__SIZEOF_INT128__)
+  // Signed a * b can itself overflow int64_t, which is UB - a Release build's
+  // optimizer is then free to assume it never happens and eliminate the
+  // overflow check entirely. Widen to a 128-bit intermediate instead.
+  const __int128 product = static_cast<__int128>(a) * static_cast<__int128>(b);
+  return product < std::numeric_limits<int64_t>::min() ||
+         product > std::numeric_limits<int64_t>::max();
+#else
+  // Portable fallback avoiding any signed-overflowing multiply: bound-check
+  // via division before multiplying.
+  if (a == std::numeric_limits<int64_t>::min()) {
+    return b != 1;
+  }
+  if (b == std::numeric_limits<int64_t>::min()) {
+    return a != 1;
+  }
+  const int64_t abs_a = a < 0 ? -a : a;
+  const int64_t abs_b = b < 0 ? -b : b;
+  return abs_a > std::numeric_limits<int64_t>::max() / abs_b;
+#endif
 }
 
 } // namespace
