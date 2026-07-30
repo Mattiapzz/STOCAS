@@ -1,0 +1,176 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  format-check:
+    name: clang-format check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check formatting
+        run: |
+          find src test examples -type f \( -name '*.hh' -o -name '*.cc' \) 2>/dev/null \
+            | xargs -r clang-format --dry-run --Werror
+
+  build-and-test:
+    name: ${{ matrix.target }} (${{ matrix.build_type }})
+    needs: format-check
+    strategy:
+      fail-fast: false
+      matrix:
+        build_type: [Debug, Release]
+        # `target` is a real matrix dimension (crossed with build_type below),
+        # not an include-only key: GitHub Actions only cross-multiplies
+        # `include` entries against existing matrix keys they share. Since
+        # none of these entries shared a key with build_type, only the last
+        # entry ever got scheduled - 6 of 8 legs were silently dropped on
+        # every run since this workflow was introduced. `include` here only
+        # attaches os/preset_prefix per target, it doesn't define new combos.
+        target: [linux-gcc, linux-clang, macos-clang, windows-msvc]
+        include:
+          - target: linux-gcc
+            os: ubuntu-latest
+            preset_prefix: linux-gcc
+          - target: linux-clang
+            os: ubuntu-latest
+            preset_prefix: linux-clang
+          - target: macos-clang
+            os: macos-latest
+            preset_prefix: macos-clang
+          - target: windows-msvc
+            os: windows-latest
+            preset_prefix: windows-msvc
+    runs-on: ${{ matrix.os }}
+    env:
+      VCPKG_BINARY_SOURCES: "clear;files,${{ github.workspace }}/.vcpkg-cache,readwrite"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Python test dependencies
+        run: python3 -m pip install --break-system-packages pytest
+
+      - name: Install GMP/MPFR (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libgmp-dev libmpfr-dev
+
+      - name: Install GMP/MPFR (macOS)
+        if: runner.os == 'macOS'
+        run: brew install gmp mpfr
+
+      - name: Cache vcpkg binaries (Windows)
+        if: runner.os == 'Windows'
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/.vcpkg-cache
+          key: vcpkg-gmp-mpfr-x64-windows-${{ hashFiles('Dependencies.cmake') }}
+
+      - name: Install GMP/MPFR (Windows)
+        if: runner.os == 'Windows'
+        run: vcpkg install gmp:x64-windows mpfr:x64-windows
+
+      - name: Cache FetchContent / build dir
+        uses: actions/cache@v4
+        with:
+          path: |
+            build/${{ matrix.preset_prefix }}-${{ matrix.build_type == 'Debug' && 'debug' || 'release' }}/_deps
+          key: ${{ matrix.os }}-${{ matrix.preset_prefix }}-${{ matrix.build_type }}-${{ hashFiles('Dependencies.cmake') }}
+
+      - name: Configure
+        shell: bash
+        run: >
+          cmake --preset
+          ${{ matrix.preset_prefix }}-${{ matrix.build_type == 'Debug' && 'debug' || 'release' }}
+          ${{ runner.os == 'Windows' && '-DCMAKE_TOOLCHAIN_FILE=$VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake' || '' }}
+
+      - name: Build
+        run: >
+          cmake --build
+          build/${{ matrix.preset_prefix }}-${{ matrix.build_type == 'Debug' && 'debug' || 'release' }}
+          --config ${{ matrix.build_type }}
+
+      - name: Test
+        run: >
+          ctest --test-dir
+          build/${{ matrix.preset_prefix }}-${{ matrix.build_type == 'Debug' && 'debug' || 'release' }}
+          --build-config ${{ matrix.build_type }} --output-on-failure
+
+  sanitizers:
+    name: sanitizers (non-blocking)
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            name: linux-asan-ubsan
+            cmake_flags: "-DSTOCAS_ENABLE_ASAN=ON -DSTOCAS_ENABLE_UBSAN=ON"
+          - os: ubuntu-latest
+            name: linux-tsan
+            cmake_flags: "-DSTOCAS_ENABLE_TSAN=ON"
+          - os: macos-latest
+            name: macos-asan-ubsan
+            cmake_flags: "-DSTOCAS_ENABLE_ASAN=ON -DSTOCAS_ENABLE_UBSAN=ON"
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Python test dependencies
+        run: python3 -m pip install --break-system-packages pytest
+      - name: Install GMP/MPFR (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libgmp-dev libmpfr-dev
+      - name: Install GMP/MPFR (macOS)
+        if: runner.os == 'macOS'
+        run: brew install gmp mpfr
+      - name: Configure
+        run: cmake -S . -B build/sanitizer -DCMAKE_BUILD_TYPE=Debug ${{ matrix.cmake_flags }}
+      - name: Build
+        run: cmake --build build/sanitizer
+      - name: Test
+        # hello_core_python_tests is excluded here: loading an ASan/TSan
+        # -instrumented .dylib/.so into an unsanitized Python interpreter is
+        # a known incompatibility, not a real bug (see [numerica_core] test
+        # exclusion note in test/hello_core/CMakeLists.txt).
+        run: ctest --test-dir build/sanitizer --output-on-failure -E hello_core_python_tests
+
+  shared-libs:
+    name: BUILD_SHARED_LIBS=ON (non-blocking)
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    env:
+      VCPKG_BINARY_SOURCES: "clear;files,${{ github.workspace }}/.vcpkg-cache,readwrite"
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Python test dependencies
+        run: python3 -m pip install --break-system-packages pytest
+      - name: Install GMP/MPFR (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libgmp-dev libmpfr-dev
+      - name: Install GMP/MPFR (macOS)
+        if: runner.os == 'macOS'
+        run: brew install gmp mpfr
+      - name: Cache vcpkg binaries (Windows)
+        if: runner.os == 'Windows'
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/.vcpkg-cache
+          key: vcpkg-gmp-mpfr-x64-windows-${{ hashFiles('Dependencies.cmake') }}
+      - name: Install GMP/MPFR (Windows)
+        if: runner.os == 'Windows'
+        run: vcpkg install gmp:x64-windows mpfr:x64-windows
+      - name: Configure
+        shell: bash
+        run: >
+          cmake -S . -B build/shared -DCMAKE_BUILD_TYPE=Debug -DBUILD_SHARED_LIBS=ON
+          ${{ runner.os == 'Windows' && '-DCMAKE_TOOLCHAIN_FILE=$VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake' || '' }}
+      - name: Build
+        run: cmake --build build/shared
+      - name: Test
+        run: ctest --test-dir build/shared --output-on-failure -E hello_core_python_tests
