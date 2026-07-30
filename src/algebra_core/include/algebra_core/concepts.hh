@@ -21,6 +21,8 @@ namespace algebra_core {
 /// @brief A semiring: an `Element` type with associative, commutative
 /// addition and multiplication, an additive identity (`zero`), and a
 /// multiplicative identity (`one`). No subtraction or division is assumed.
+/// `Element` must be equality-comparable - generic algorithms (e.g. `gcd`,
+/// see generic_algorithms.hh) need to test elements against `zero()`.
 template <typename R>
 concept Semiring =
     requires(const R& ring, const typename R::Element& a, const typename R::Element& b) {
@@ -29,6 +31,7 @@ concept Semiring =
       { ring.one() } -> std::same_as<typename R::Element>;
       { ring.add(a, b) } -> std::same_as<typename R::Element>;
       { ring.mul(a, b) } -> std::same_as<typename R::Element>;
+      { a == b } -> std::convertible_to<bool>;
     };
 
 /// @brief A ring: a semiring with additive inverses, i.e. subtraction and
