@@ -125,9 +125,6 @@ jobs:
           - os: ubuntu-latest
             name: linux-asan-ubsan
             cmake_flags: "-DSTOCAS_ENABLE_ASAN=ON -DSTOCAS_ENABLE_UBSAN=ON"
-          - os: ubuntu-latest
-            name: linux-tsan
-            cmake_flags: "-DSTOCAS_ENABLE_TSAN=ON"
           - os: macos-latest
             name: macos-asan-ubsan
             cmake_flags: "-DSTOCAS_ENABLE_ASAN=ON -DSTOCAS_ENABLE_UBSAN=ON"
@@ -151,6 +148,33 @@ jobs:
         # -instrumented .dylib/.so into an unsanitized Python interpreter is
         # a known incompatibility, not a real bug (see [numerica_core] test
         # exclusion note in test/hello_core/CMakeLists.txt).
+        run: ctest --test-dir build/sanitizer --output-on-failure -E hello_core_python_tests
+
+  sanitizer-tsan:
+    name: linux-tsan
+    needs: format-check
+    # Blocking (no continue-on-error), unlike the other sanitizer legs
+    # above: M2-GATE requires the symbol_table concurrency contract's TSan
+    # stress test (test/symbol_table/test_concurrency.cc, M2-T4) to be a
+    # blocking CI leg specifically, since a green TSan report - not just
+    # "the process didn't crash" - is the only real evidence that contract
+    # holds. Split into its own job (rather than continue-on-error per
+    # matrix entry, which can't vary by matrix value at the job level) so
+    # this one leg can be blocking while linux-asan-ubsan/macos-asan-ubsan
+    # above stay opt-in.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Python test dependencies
+        run: python3 -m pip install --break-system-packages pytest
+      - name: Install GMP/MPFR (Linux)
+        run: sudo apt-get update && sudo apt-get install -y libgmp-dev libmpfr-dev
+      - name: Configure
+        run: cmake -S . -B build/sanitizer -DCMAKE_BUILD_TYPE=Debug -DSTOCAS_ENABLE_TSAN=ON
+      - name: Build
+        run: cmake --build build/sanitizer
+      - name: Test
+        # See the sanitizers job's identical note on hello_core_python_tests.
         run: ctest --test-dir build/sanitizer --output-on-failure -E hello_core_python_tests
 
   shared-libs:
