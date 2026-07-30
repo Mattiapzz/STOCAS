@@ -18,6 +18,15 @@ option(STOCAS_ENABLE_TSAN "Enable ThreadSanitizer" OFF)
 # add_library() calls across the project must omit STATIC/SHARED so this
 # variable controls library type project-wide, per CLAUDE.md §6.
 
+# Every static module library (e.g. numerica_core) can end up linked into an
+# always-SHARED *_c_api library (CLAUDE.md §9 - ctypes needs a .so/.dylib/.dll
+# regardless of BUILD_SHARED_LIBS), so all code must be position-independent
+# even when BUILD_SHARED_LIBS=OFF. Without this, static libs built without
+# -fPIC fail to link into their C API's shared library - most visibly under
+# ASan, which requires stricter relocations than a default (non-sanitized)
+# build happens to tolerate on most toolchains.
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
 # --- A single interface target carrying project-wide compiler settings ---
 add_library(stocas_project_options INTERFACE)
 add_library(stocas::project_options ALIAS stocas_project_options)
