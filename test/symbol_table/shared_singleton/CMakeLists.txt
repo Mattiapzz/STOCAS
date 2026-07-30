@@ -16,8 +16,9 @@ target_include_directories(
   symbol_table_shared_for_singleton_test
   PUBLIC "${CMAKE_SOURCE_DIR}/src/symbol_table/include")
 target_compile_features(symbol_table_shared_for_singleton_test PUBLIC cxx_std_20)
-target_link_libraries(symbol_table_shared_for_singleton_test
-                       PRIVATE $<BUILD_INTERFACE:stocas::project_options>)
+target_link_libraries(
+  symbol_table_shared_for_singleton_test
+  PRIVATE $<BUILD_INTERFACE:stocas::project_options> $<BUILD_INTERFACE:stocas::sanitizers>)
 set_target_properties(symbol_table_shared_for_singleton_test
                        PROPERTIES WINDOWS_EXPORT_ALL_SYMBOLS ON)
 
