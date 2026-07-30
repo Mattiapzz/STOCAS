@@ -14,7 +14,7 @@ template <typename F>
 concept DualScalar = requires(const F& a, const F& b) {
   { a + b } -> std::same_as<F>;
   { a - b } -> std::same_as<F>;
-  { a * b } -> std::same_as<F>;
+  { a* b } -> std::same_as<F>;
   { a / b } -> std::same_as<F>;
   { F::exp(a) } -> std::same_as<F>;
   { F::log(a) } -> std::same_as<F>;
