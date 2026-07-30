@@ -8,6 +8,21 @@
 
 #include <symbol_table/symbol.hh>
 
+// Portable ASan/LSan detection (Clang exposes __has_feature; GCC only
+// defines __SANITIZE_ADDRESS__), used solely to tell LeakSanitizer the
+// deliberate old-Snapshot leak below is known and intentional, not a bug.
+#if defined(__has_feature)
+#if __has_feature(address_sanitizer)
+#define STOCAS_SYMBOL_TABLE_HAVE_ASAN 1
+#endif
+#elif defined(__SANITIZE_ADDRESS__)
+#define STOCAS_SYMBOL_TABLE_HAVE_ASAN 1
+#endif
+
+#ifdef STOCAS_SYMBOL_TABLE_HAVE_ASAN
+#include <sanitizer/lsan_interface.h>
+#endif
+
 namespace symbol_table {
 
 namespace {
@@ -111,7 +126,13 @@ public:
     next->index_by_qualified_name.emplace(qualified, id);
 
     snapshot_.store(next.release(), std::memory_order_release);
-    return id; // `current` is deliberately leaked - see the class comment.
+    // `current` is deliberately leaked (see the class comment) - tell LSan
+    // this specific, bounded leak is known and intentional rather than
+    // flagging it as a bug.
+#ifdef STOCAS_SYMBOL_TABLE_HAVE_ASAN
+    __lsan_ignore_object(current);
+#endif
+    return id;
   }
 
 private:
