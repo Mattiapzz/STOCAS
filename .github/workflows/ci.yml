@@ -51,7 +51,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Install Python test dependencies
-        run: pip install pytest
+        run: python3 -m pip install pytest
 
       - name: Install GMP/MPFR (Linux)
         if: runner.os == 'Linux'
@@ -118,7 +118,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Install Python test dependencies
-        run: pip install pytest
+        run: python3 -m pip install pytest
       - name: Install GMP/MPFR (Linux)
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y libgmp-dev libmpfr-dev
@@ -149,7 +149,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Install Python test dependencies
-        run: pip install pytest
+        run: python3 -m pip install pytest
       - name: Install GMP/MPFR (Linux)
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y libgmp-dev libmpfr-dev
