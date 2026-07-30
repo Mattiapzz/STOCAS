@@ -17,7 +17,7 @@ template <typename F>
 concept FloatLike = requires(const F& a, const F& b) {
   { a + b } -> std::same_as<F>;
   { a - b } -> std::same_as<F>;
-  { a * b } -> std::same_as<F>;
+  { a* b } -> std::same_as<F>;
   { a / b } -> std::same_as<F>;
   { a.to_double() } -> std::same_as<double>;
 };
