@@ -24,14 +24,23 @@ inline std::uint64_t mul_mod_u64(std::uint64_t a, std::uint64_t b, std::uint64_t
   return static_cast<std::uint64_t>(product % modulus);
 #else
   // Portable fallback: Russian-peasant multiplication mod modulus, avoiding
-  // any 128-bit intermediate at the cost of up to 64 iterations.
+  // any 128-bit intermediate at the cost of up to 64 iterations. `x + y`
+  // below must not overflow uint64_t for moduli near 2^64 - both operands
+  // are already < modulus, so `x >= modulus - y` implies x + y >= modulus
+  // without the addition itself ever exceeding UINT64_MAX.
+  const auto add_mod = [modulus](std::uint64_t x, std::uint64_t y) -> std::uint64_t {
+    if (x >= modulus - y) {
+      return x - (modulus - y);
+    }
+    return x + y;
+  };
   std::uint64_t result = 0;
   a %= modulus;
   while (b > 0) {
     if (b & 1U) {
-      result = (result + a) % modulus;
+      result = add_mod(result, a);
     }
-    a = (a + a) % modulus;
+    a = add_mod(a, a);
     b >>= 1U;
   }
   return result;
