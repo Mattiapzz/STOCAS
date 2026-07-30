@@ -17,23 +17,31 @@ jobs:
             | xargs -r clang-format --dry-run --Werror
 
   build-and-test:
-    name: ${{ matrix.name }} (${{ matrix.build_type }})
+    name: ${{ matrix.target }} (${{ matrix.build_type }})
     needs: format-check
     strategy:
       fail-fast: false
       matrix:
         build_type: [Debug, Release]
+        # `target` is a real matrix dimension (crossed with build_type below),
+        # not an include-only key: GitHub Actions only cross-multiplies
+        # `include` entries against existing matrix keys they share. Since
+        # none of these entries shared a key with build_type, only the last
+        # entry ever got scheduled - 6 of 8 legs were silently dropped on
+        # every run since this workflow was introduced. `include` here only
+        # attaches os/preset_prefix per target, it doesn't define new combos.
+        target: [linux-gcc, linux-clang, macos-clang, windows-msvc]
         include:
-          - name: linux-gcc
+          - target: linux-gcc
             os: ubuntu-latest
             preset_prefix: linux-gcc
-          - name: linux-clang
+          - target: linux-clang
             os: ubuntu-latest
             preset_prefix: linux-clang
-          - name: macos-clang
+          - target: macos-clang
             os: macos-latest
             preset_prefix: macos-clang
-          - name: windows-msvc
+          - target: windows-msvc
             os: windows-latest
             preset_prefix: windows-msvc
     runs-on: ${{ matrix.os }}
