@@ -4,6 +4,12 @@ on:
   push:
     branches: [main]
   pull_request:
+  # windows-msvc (build-and-test) and BUILD_SHARED_LIBS=ON (windows-latest)
+  # only run for this trigger, not push/pull_request - vcpkg building
+  # GMP/MPFR from source is by far the slowest and priciest leg. Run it
+  # manually (`gh workflow run ci.yml`) once a milestone's tasks are all
+  # merged, rather than on every per-task push.
+  workflow_dispatch:
 
 jobs:
   format-check:
@@ -61,18 +67,26 @@ jobs:
         if: runner.os == 'macOS'
         run: brew install gmp mpfr
 
+      # windows-msvc only builds on workflow_dispatch (see the `on:` block
+      # above) - vcpkg building GMP/MPFR from source is the slowest, most
+      # expensive leg (2x runner-minute multiplier on top of that), so it's
+      # skipped on every per-task push/PR and run manually at milestone
+      # gates instead. The job still spins up a windows-latest runner for a
+      # few seconds (all its steps below skip), which is negligible next to
+      # the 15-30 min a real vcpkg build takes.
       - name: Cache vcpkg binaries (Windows)
-        if: runner.os == 'Windows'
+        if: runner.os == 'Windows' && github.event_name == 'workflow_dispatch'
         uses: actions/cache@v4
         with:
           path: ${{ github.workspace }}/.vcpkg-cache
           key: vcpkg-gmp-mpfr-x64-windows-${{ hashFiles('Dependencies.cmake') }}
 
       - name: Install GMP/MPFR (Windows)
-        if: runner.os == 'Windows'
+        if: runner.os == 'Windows' && github.event_name == 'workflow_dispatch'
         run: vcpkg install gmp:x64-windows mpfr:x64-windows
 
       - name: Cache FetchContent / build dir
+        if: matrix.target != 'windows-msvc' || github.event_name == 'workflow_dispatch'
         uses: actions/cache@v4
         with:
           path: |
@@ -80,6 +94,7 @@ jobs:
           key: ${{ matrix.os }}-${{ matrix.preset_prefix }}-${{ matrix.build_type }}-${{ hashFiles('Dependencies.cmake') }}
 
       - name: Configure
+        if: matrix.target != 'windows-msvc' || github.event_name == 'workflow_dispatch'
         shell: bash
         run: >
           cmake --preset
@@ -87,12 +102,14 @@ jobs:
           ${{ runner.os == 'Windows' && '-DCMAKE_TOOLCHAIN_FILE=$VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake' || '' }}
 
       - name: Build
+        if: matrix.target != 'windows-msvc' || github.event_name == 'workflow_dispatch'
         run: >
           cmake --build
           build/${{ matrix.preset_prefix }}-${{ matrix.build_type == 'Debug' && 'debug' || 'release' }}
           --config ${{ matrix.build_type }}
 
       - name: Test
+        if: matrix.target != 'windows-msvc' || github.event_name == 'workflow_dispatch'
         run: >
           ctest --test-dir
           build/${{ matrix.preset_prefix }}-${{ matrix.build_type == 'Debug' && 'debug' || 'release' }}
@@ -156,21 +173,26 @@ jobs:
       - name: Install GMP/MPFR (macOS)
         if: runner.os == 'macOS'
         run: brew install gmp mpfr
+      # windows-latest only builds here on workflow_dispatch - same
+      # milestone-gate-only rationale as build-and-test's windows-msvc leg.
       - name: Cache vcpkg binaries (Windows)
-        if: runner.os == 'Windows'
+        if: runner.os == 'Windows' && github.event_name == 'workflow_dispatch'
         uses: actions/cache@v4
         with:
           path: ${{ github.workspace }}/.vcpkg-cache
           key: vcpkg-gmp-mpfr-x64-windows-${{ hashFiles('Dependencies.cmake') }}
       - name: Install GMP/MPFR (Windows)
-        if: runner.os == 'Windows'
+        if: runner.os == 'Windows' && github.event_name == 'workflow_dispatch'
         run: vcpkg install gmp:x64-windows mpfr:x64-windows
       - name: Configure
+        if: matrix.os != 'windows-latest' || github.event_name == 'workflow_dispatch'
         shell: bash
         run: >
           cmake -S . -B build/shared -DCMAKE_BUILD_TYPE=Debug -DBUILD_SHARED_LIBS=ON
           ${{ runner.os == 'Windows' && '-DCMAKE_TOOLCHAIN_FILE=$VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake' || '' }}
       - name: Build
+        if: matrix.os != 'windows-latest' || github.event_name == 'workflow_dispatch'
         run: cmake --build build/shared
       - name: Test
+        if: matrix.os != 'windows-latest' || github.event_name == 'workflow_dispatch'
         run: ctest --test-dir build/shared --output-on-failure -E hello_core_python_tests
