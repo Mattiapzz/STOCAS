@@ -16,6 +16,9 @@ Testing/
 # --- FetchContent-fetched sources (never commit vendored deps) ---
 **/_deps/
 
+# --- vcpkg manifest-mode local install tree (Windows CI) ---
+vcpkg_installed/
+
 # --- Compiled artifacts ---
 *.o
 *.obj

@@ -66,11 +66,19 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{ github.workspace }}/.vcpkg-cache
-          key: vcpkg-gmp-mpfr-x64-windows-${{ hashFiles('Dependencies.cmake') }}
+          key: vcpkg-gmp-mpfr-x64-windows-${{ hashFiles('vcpkg.json') }}
 
       - name: Install GMP/MPFR (Windows)
         if: runner.os == 'Windows'
-        run: vcpkg install gmp:x64-windows mpfr:x64-windows
+        # Manifest mode (vcpkg.json, pinned builtin-baseline) instead of the
+        # classic `vcpkg install gmp:x64-windows mpfr:x64-windows` - classic
+        # mode resolves port versions from whatever vcpkg registry state the
+        # runner image happens to ship, which drifts on every GH image
+        # update and silently invalidates the binary cache below (same
+        # Dependencies.cmake hash, different resolved GMP/MPFR ABI). Pinning
+        # the baseline makes the resolved versions - and so the cache key -
+        # deterministic across runs.
+        run: vcpkg install --triplet x64-windows
 
       - name: Cache FetchContent / build dir
         uses: actions/cache@v4
@@ -161,10 +169,10 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{ github.workspace }}/.vcpkg-cache
-          key: vcpkg-gmp-mpfr-x64-windows-${{ hashFiles('Dependencies.cmake') }}
+          key: vcpkg-gmp-mpfr-x64-windows-${{ hashFiles('vcpkg.json') }}
       - name: Install GMP/MPFR (Windows)
         if: runner.os == 'Windows'
-        run: vcpkg install gmp:x64-windows mpfr:x64-windows
+        run: vcpkg install --triplet x64-windows
       - name: Configure
         shell: bash
         run: >
