@@ -177,6 +177,33 @@ jobs:
         # See the sanitizers job's identical note on hello_core_python_tests.
         run: ctest --test-dir build/sanitizer --output-on-failure -E hello_core_python_tests
 
+  sanitizer-asan:
+    name: linux-asan-ubsan (blocking)
+    needs: format-check
+    # Blocking (no continue-on-error), unlike the `sanitizers` job above:
+    # M2-T6 requires Workspace's allocate/reset fuzz test
+    # (test/symbol_table/test_workspace.cc) to be ASan-clean as a blocking
+    # CI leg specifically, since a green ASan report - not just "the
+    # process didn't crash" - is the only real evidence the poison/unpoison
+    # use-after-reset contract holds. Split into its own job (same reason
+    # as sanitizer-tsan above: continue-on-error can't vary per matrix
+    # entry at the job level) so this leg can be blocking while the
+    # `sanitizers` job's linux-asan-ubsan/macos-asan-ubsan legs stay opt-in.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Python test dependencies
+        run: python3 -m pip install --break-system-packages pytest
+      - name: Install GMP/MPFR (Linux)
+        run: sudo apt-get update && sudo apt-get install -y libgmp-dev libmpfr-dev
+      - name: Configure
+        run: cmake -S . -B build/sanitizer -DCMAKE_BUILD_TYPE=Debug -DSTOCAS_ENABLE_ASAN=ON -DSTOCAS_ENABLE_UBSAN=ON
+      - name: Build
+        run: cmake --build build/sanitizer
+      - name: Test
+        # See the sanitizers job's identical note on hello_core_python_tests.
+        run: ctest --test-dir build/sanitizer --output-on-failure -E hello_core_python_tests
+
   shared-libs:
     name: BUILD_SHARED_LIBS=ON (non-blocking)
     continue-on-error: true
