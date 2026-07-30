@@ -8,9 +8,27 @@
 
 /// @file
 /// @brief Process-wide, append-only symbol table: interned `Symbol` handles,
-/// namespaced by module. Single-threaded in this milestone (M2-T3) - the
-/// writer-lock/lock-free-read concurrency contract is added in M2-T4 and
-/// must not be assumed yet.
+/// namespaced by module.
+///
+/// Concurrency contract (M2-T4 - the compensating control for losing
+/// Rust's borrow-checker-enforced race freedom, see roadmap.md's risk
+/// register "no compiler-enforced race freedom" row):
+///   - `get_symbol()` calls that resolve to an *existing* registration
+///     (the overwhelming common case, including every `symbol_name()`
+///     call) are lock-free/wait-free: they atomically load an immutable
+///     snapshot of the table and never block on, or even touch, any mutex.
+///   - Registering a genuinely *new* symbol takes an internal writer lock
+///     shared by all writers (never taken by pure lookups), copies the
+///     current snapshot, appends the new entry, and atomically publishes
+///     the result - concurrent readers observe either the pre- or
+///     post-registration snapshot in full, never a partial one.
+///   - This is proven, not assumed: see
+///     test/symbol_table/test_concurrency.cc's TSan-checked stress test
+///     (N threads registering distinct symbols concurrently with M threads
+///     looking up existing ones, plus a dedicated same-name registration
+///     race), which is a *blocking* CI leg precisely because a green
+///     TSan report - not just "didn't crash" - is the only real evidence
+///     this contract holds.
 namespace symbol_table {
 
 /// @brief Properties a symbol can be registered with, mirroring the
