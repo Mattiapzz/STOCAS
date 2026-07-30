@@ -14,3 +14,8 @@ stocas_add_catch_test(
 # only compiles in when the consuming target injects CORE_NAMESPACE - real
 # consumers (e.g. atom_core, M3+) will set this to their own module name.
 target_compile_definitions(symbol_table_tests PRIVATE CORE_NAMESPACE="symbol_table_tests")
+
+# M2-T5: shared-library singleton identity test (separate subdirectory since
+# it builds its own SHARED copy of symbol_table's sources - see its
+# CMakeLists.txt for why).
+add_subdirectory(shared_singleton)
