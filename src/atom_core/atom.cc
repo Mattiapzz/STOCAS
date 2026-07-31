@@ -269,4 +269,8 @@ std::size_t AtomStore::node_count() const noexcept {
   return impl_->nodes.size();
 }
 
+Atom AtomStore::as_atom(AtomView view) const noexcept {
+  return Atom(this, view.index_);
+}
+
 } // namespace atom_core
