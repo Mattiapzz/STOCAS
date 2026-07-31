@@ -160,6 +160,33 @@ private:
 
   Atom parse_unary() {
     if (peek().kind == TokKind::Minus) {
+      // A '-' immediately followed by a numeric literal builds a raw
+      // negative Num leaf directly, rather than negate()'s Mul(-1, N):
+      // this is what the printer (M3-T3) needs to round-trip - a negative
+      // Num leaf (e.g. the exponent `/` desugars to, store_.num(-1)) would
+      // otherwise be unreconstructable, since re-parsing its printed form
+      // "-1" would always go through this same negate() path and produce a
+      // *different* tree shape (Mul, not a raw Num) than the original.
+      if (tokens_[pos_ + 1].kind == TokKind::Number) {
+        advance();
+        Token number = advance();
+        if (number.text.empty()) {
+          fail("empty numeric literal", number.pos);
+        }
+        Atom base = store_.num(numerica_core::Rational(numerica_core::BigInt("-" + number.text)));
+        // The negative-literal short-circuit above skips parse_pow(), so
+        // '^' must be handled here too (same as parse_pow() below) -
+        // otherwise "-19^2" would build just Num(-19) and leave "^2"
+        // unconsumed instead of Pow(Num(-19), Num(2)), which is exactly
+        // what the printer emits for that tree and must be able to
+        // reparse.
+        if (peek().kind == TokKind::Caret) {
+          advance();
+          Atom exponent = parse_unary();
+          return store_.pow(base, exponent);
+        }
+        return base;
+      }
       advance();
       return negate(parse_unary());
     }
