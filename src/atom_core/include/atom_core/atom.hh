@@ -135,6 +135,13 @@ public:
   /// @return Node count currently held (for tests/diagnostics only).
   [[nodiscard]] std::size_t node_count() const noexcept;
 
+  /// @brief Recovers an owning `Atom` handle for a view into this same
+  /// store (e.g. a child obtained via `AtomView::child()`) - safe because
+  /// every node an `AtomView` can reference is already interned in this
+  /// store's arena for the store's lifetime; this performs no new
+  /// allocation or interning, just reconstructs the handle.
+  [[nodiscard]] Atom as_atom(AtomView view) const noexcept;
+
 private:
   friend class AtomView;
 
