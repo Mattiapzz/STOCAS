@@ -16,6 +16,9 @@ namespace atom_core {
 ///
 /// Parentheses are inserted wherever needed for that guarantee to hold
 /// (not necessarily the minimal set a human would write).
+///
+/// @param atom The atom to print.
+/// @return The canonical string form.
 [[nodiscard]] std::string print(AtomView atom);
 
 } // namespace atom_core
