@@ -177,6 +177,37 @@ jobs:
         # See the sanitizers job's identical note on hello_core_python_tests.
         run: ctest --test-dir build/sanitizer --output-on-failure -E hello_core_python_tests
 
+  fuzz-parser:
+    name: atom_core parser fuzz (non-blocking)
+    continue-on-error: true
+    needs: format-check
+    # M3-T2 exit criteria: the parser fuzzed for a fixed CPU-time budget
+    # with zero crashes. Non-blocking like the `sanitizers` job (fuzzing is
+    # inherently exploratory, not a per-commit correctness gate) but runs on
+    # every push/PR rather than on a separate schedule, to keep the CI
+    # wiring simple. libFuzzer requires clang; the fuzz target is opt-in
+    # (STOCAS_ENABLE_FUZZING) and excluded from the regular Catch2 binary.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install GMP/MPFR
+        run: sudo apt-get update && sudo apt-get install -y clang libgmp-dev libmpfr-dev
+      - name: Configure
+        run: >
+          cmake -S . -B build/fuzz -DCMAKE_BUILD_TYPE=Debug -DSTOCAS_ENABLE_FUZZING=ON
+          -DCMAKE_CXX_COMPILER=clang++
+      - name: Build
+        run: cmake --build build/fuzz --target atom_core_fuzz_parser
+      - name: Fuzz
+        # See fuzz_parser.cc's header comment: ASAN_OPTIONS=detect_leaks=0
+        # suppresses symbol_table's already-documented, already-intentional
+        # Snapshot leak (M2-T4), which libFuzzer's own periodic leak check
+        # re-flags independently of LeakSanitizer's normal end-of-process
+        # check - not a real bug, and not what this job is meant to catch.
+        run: >
+          ASAN_OPTIONS=detect_leaks=0
+          ./build/fuzz/test/atom_core/atom_core_fuzz_parser -max_total_time=60 -close_fd_mask=3
+
   sanitizer-asan:
     name: linux-asan-ubsan (blocking)
     needs: format-check

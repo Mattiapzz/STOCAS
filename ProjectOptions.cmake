@@ -13,6 +13,7 @@ option(STOCAS_ENABLE_CPPCHECK "Run cppcheck during the build" OFF)
 option(STOCAS_ENABLE_ASAN "Enable AddressSanitizer" OFF)
 option(STOCAS_ENABLE_UBSAN "Enable UndefinedBehaviorSanitizer" OFF)
 option(STOCAS_ENABLE_TSAN "Enable ThreadSanitizer" OFF)
+option(STOCAS_ENABLE_FUZZING "Build libFuzzer-based fuzz targets (clang only)" OFF)
 
 # BUILD_SHARED_LIBS is a standard CMake cache variable (not redefined here);
 # add_library() calls across the project must omit STATIC/SHARED so this
