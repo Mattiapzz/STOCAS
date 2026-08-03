@@ -24,6 +24,11 @@ namespace atom_core {
 ///    scope for M3-T4 (not required by its normalization table) and is
 ///    deferred to a later milestone.
 ///  - `Fun`: arguments are normalized; the call itself is not evaluated.
+///
+/// @param store The arena new (normalized) nodes are built in - must be the
+///        same store @p atom came from.
+/// @param atom The atom to normalize.
+/// @return The normal-form atom.
 [[nodiscard]] Atom normalize(AtomStore& store, AtomView atom);
 
 } // namespace atom_core

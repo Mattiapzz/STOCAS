@@ -33,6 +33,7 @@ class AtomStore;
 /// structurally identical subexpressions always resolve to one shared slot.
 class AtomView {
 public:
+  /// @return The kind of node this view refers to.
   [[nodiscard]] AtomTag tag() const;
 
   /// @throws std::logic_error if tag() != AtomTag::Num.
@@ -50,6 +51,8 @@ public:
   /// @throws std::out_of_range if @p index >= child_count().
   [[nodiscard]] AtomView child(std::size_t index) const;
 
+  /// @return true iff @p other is structurally equal to this atom (same
+  ///         tag, same payload, and structurally equal children).
   [[nodiscard]] bool operator==(const AtomView& other) const;
 
   /// @brief A strict total order over all `Atom`/`AtomView` values,
@@ -88,9 +91,15 @@ private:
 /// convertible to `AtomView` for passing to read-only APIs.
 class Atom {
 public:
+  /// @return A non-owning view of this atom.
   [[nodiscard]] AtomView view() const noexcept { return AtomView(store_, index_); }
+
+  /// @brief Implicit conversion to `AtomView`, for passing an `Atom`
+  /// directly to APIs that take a read-only view.
   operator AtomView() const noexcept { return view(); } // NOLINT(google-explicit-constructor)
 
+  /// @return true iff @p other is structurally equal to this atom (see
+  ///         `AtomView::operator==`).
   [[nodiscard]] bool operator==(const Atom& other) const { return view() == other.view(); }
 
 private:
@@ -118,7 +127,14 @@ public:
   AtomStore(AtomStore&&) = delete;
   AtomStore& operator=(AtomStore&&) = delete;
 
+  /// @brief Interns a numeric leaf.
+  /// @param value The numeric value.
+  /// @return The (possibly pre-existing, hash-consed) atom for @p value.
   [[nodiscard]] Atom num(numerica_core::Rational value);
+
+  /// @brief Interns a variable leaf.
+  /// @param symbol The variable's symbol.
+  /// @return The (possibly pre-existing, hash-consed) atom for @p symbol.
   [[nodiscard]] Atom var(symbol_table::Symbol symbol);
 
   /// @brief Builds a canonicalized (sorted, one level flattened) sum.
@@ -129,7 +145,17 @@ public:
   /// @brief Same canonicalization as add(), for multiplication.
   [[nodiscard]] Atom mul(std::span<const Atom> factors);
 
+  /// @brief Builds `base^exponent`. Base and exponent order is preserved
+  /// (exponentiation is not commutative).
+  /// @param base The base.
+  /// @param exponent The exponent.
+  /// @return The (possibly pre-existing, hash-consed) power atom.
   [[nodiscard]] Atom pow(Atom base, Atom exponent);
+
+  /// @brief Builds a function call. Argument order is preserved.
+  /// @param head The function's symbol.
+  /// @param args The call's arguments, in order.
+  /// @return The (possibly pre-existing, hash-consed) call atom.
   [[nodiscard]] Atom fun(symbol_table::Symbol head, std::span<const Atom> args);
 
   /// @return Node count currently held (for tests/diagnostics only).
