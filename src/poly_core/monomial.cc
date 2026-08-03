@@ -37,4 +37,30 @@ Monomial Monomial::operator*(const Monomial& other) const {
   return Monomial(std::move(result));
 }
 
+bool Monomial::divides(const Monomial& other) const {
+  if (exponents_.size() != other.exponents_.size()) {
+    throw std::invalid_argument("Monomial::divides: mismatched num_vars()");
+  }
+  for (std::size_t i = 0; i < exponents_.size(); ++i) {
+    if (exponents_[i] > other.exponents_[i]) {
+      return false;
+    }
+  }
+  return true;
+}
+
+Monomial Monomial::operator/(const Monomial& other) const {
+  if (exponents_.size() != other.exponents_.size()) {
+    throw std::invalid_argument("Monomial::operator/: mismatched num_vars()");
+  }
+  if (!other.divides(*this)) {
+    throw std::invalid_argument("Monomial::operator/: other does not divide *this");
+  }
+  std::vector<Exponent> result(exponents_.size());
+  for (std::size_t i = 0; i < exponents_.size(); ++i) {
+    result[i] = exponents_[i] - other.exponents_[i];
+  }
+  return Monomial(std::move(result));
+}
+
 } // namespace poly_core
