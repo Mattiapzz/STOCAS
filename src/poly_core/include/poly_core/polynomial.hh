@@ -147,10 +147,128 @@ public:
     return result;
   }
 
+  /// @return The maximum exponent of variable @p var_index across all terms
+  ///         (0 for the zero polynomial or if the variable never appears).
+  /// @throws std::out_of_range if @p var_index >= variables().size().
+  [[nodiscard]] Exponent degree_in(std::size_t var_index) const {
+    if (var_index >= variables_.size()) {
+      throw std::out_of_range("MultivariatePolynomial::degree_in: var_index out of range");
+    }
+    Exponent max_exponent = 0;
+    for (const Term& term : terms_) {
+      max_exponent = std::max(max_exponent, term.first.exponent(var_index));
+    }
+    return max_exponent;
+  }
+
+  /// @brief Substitutes variable @p var_index with the constant
+  /// @p value, folding it into each term's coefficient. The variable list
+  /// is unchanged - the result's monomials simply always have exponent 0
+  /// at @p var_index (see to_univariate()/embed_univariate() for moving
+  /// between this padded representation and a true reduced-arity one).
+  /// @throws std::out_of_range if @p var_index >= variables().size().
+  [[nodiscard]] MultivariatePolynomial evaluate(std::size_t var_index, const Coeff& value) const {
+    if (var_index >= variables_.size()) {
+      throw std::out_of_range("MultivariatePolynomial::evaluate: var_index out of range");
+    }
+    MultivariatePolynomial result(*ring_, variables_);
+    std::vector<Term> raw;
+    raw.reserve(terms_.size());
+    for (const Term& term : terms_) {
+      Coeff scaled = ring_->mul(term.second, coeff_pow(value, term.first.exponent(var_index)));
+      std::vector<Exponent> exponents;
+      exponents.reserve(variables_.size());
+      for (std::size_t i = 0; i < variables_.size(); ++i) {
+        exponents.push_back(i == var_index ? 0 : term.first.exponent(i));
+      }
+      raw.emplace_back(Monomial(std::move(exponents)), std::move(scaled));
+    }
+    std::sort(raw.begin(), raw.end(), [](const Term& lhs, const Term& rhs) {
+      return lhs.first > rhs.first;
+    });
+    for (Term& term : raw) {
+      if (!result.terms_.empty() && result.terms_.back().first == term.first) {
+        result.terms_.back().second = ring_->add(result.terms_.back().second, term.second);
+      } else {
+        result.terms_.push_back(std::move(term));
+      }
+    }
+    std::erase_if(result.terms_, [this](const Term& term) { return term.second == ring_->zero(); });
+    return result;
+  }
+
+  /// @brief Projects a polynomial that only depends on variable
+  /// @p var_index (every other exponent is 0 in every term - typically
+  /// reached by evaluate()-ing away every other variable) down to a true
+  /// single-variable polynomial, for use with univariate algorithms (e.g.
+  /// univariate_gcd.hh). Inverse of embed_univariate().
+  /// @throws std::out_of_range if @p var_index >= variables().size().
+  /// @throws std::logic_error if any term has a nonzero exponent at a
+  ///         variable other than @p var_index.
+  [[nodiscard]] MultivariatePolynomial to_univariate(std::size_t var_index) const {
+    if (var_index >= variables_.size()) {
+      throw std::out_of_range("MultivariatePolynomial::to_univariate: var_index out of range");
+    }
+    MultivariatePolynomial result(*ring_, {variables_[var_index]});
+    result.terms_.reserve(terms_.size());
+    for (const Term& term : terms_) {
+      for (std::size_t i = 0; i < variables_.size(); ++i) {
+        if (i != var_index && term.first.exponent(i) != 0) {
+          throw std::logic_error(
+              "MultivariatePolynomial::to_univariate: depends on more than one variable");
+        }
+      }
+      result.terms_.emplace_back(Monomial(std::vector<Exponent>{term.first.exponent(var_index)}),
+                                 term.second);
+    }
+    return result;
+  }
+
+  /// @brief Embeds a single-variable polynomial into a wider variable list
+  /// at position @p var_index (every other exponent is 0). Inverse of
+  /// to_univariate().
+  /// @throws std::out_of_range if @p var_index >= full_variables.size().
+  /// @throws std::invalid_argument if @p univariate has more than 1 variable.
+  [[nodiscard]] static MultivariatePolynomial
+  embed_univariate(const R& ring,
+                   std::vector<symbol_table::Symbol> full_variables,
+                   std::size_t var_index,
+                   const MultivariatePolynomial& univariate) {
+    if (var_index >= full_variables.size()) {
+      throw std::out_of_range("MultivariatePolynomial::embed_univariate: var_index out of range");
+    }
+    if (univariate.variables().size() != 1) {
+      throw std::invalid_argument("MultivariatePolynomial::embed_univariate: expected a "
+                                  "univariate polynomial (exactly 1 variable)");
+    }
+    MultivariatePolynomial result(ring, std::move(full_variables));
+    result.terms_.reserve(univariate.terms_.size());
+    for (const Term& term : univariate.terms_) {
+      std::vector<Exponent> exponents(result.variables_.size(), 0);
+      exponents[var_index] = term.first.exponent(0);
+      result.terms_.emplace_back(Monomial(std::move(exponents)), term.second);
+    }
+    return result;
+  }
+
 private:
   const R* ring_;
   std::vector<symbol_table::Symbol> variables_;
   std::vector<Term> terms_; // descending Monomial order, no zero/duplicate entries
+
+  [[nodiscard]] Coeff coeff_pow(const Coeff& base, Exponent exponent) const {
+    Coeff result = ring_->one();
+    Coeff power = base;
+    Exponent remaining = exponent;
+    while (remaining > 0) {
+      if (remaining & 1U) {
+        result = ring_->mul(result, power);
+      }
+      power = ring_->mul(power, power);
+      remaining >>= 1U;
+    }
+    return result;
+  }
 
   void require_same_variables(const MultivariatePolynomial& other) const {
     if (variables_.size() != other.variables_.size()) {

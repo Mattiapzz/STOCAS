@@ -49,6 +49,17 @@ public:
   /// @throws std::invalid_argument if @p other has a different num_vars().
   [[nodiscard]] Monomial operator*(const Monomial& other) const;
 
+  /// @return true iff every exponent of `*this` is <= the corresponding
+  ///         exponent of @p other (i.e. `*this` divides @p other).
+  /// @throws std::invalid_argument if @p other has a different num_vars().
+  [[nodiscard]] bool divides(const Monomial& other) const;
+
+  /// @brief Elementwise-subtracts exponents: `*this / other` is the
+  /// quotient monomial such that `other * (*this / other) == *this`.
+  /// @throws std::invalid_argument if @p other has a different num_vars(),
+  ///         or if @p other does not divide `*this` (see divides()).
+  [[nodiscard]] Monomial operator/(const Monomial& other) const;
+
 private:
   std::vector<Exponent> exponents_;
 };
