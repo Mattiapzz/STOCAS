@@ -208,6 +208,34 @@ jobs:
           ASAN_OPTIONS=detect_leaks=0
           ./build/fuzz/test/atom_core/atom_core_fuzz_parser -max_total_time=60 -close_fd_mask=3
 
+  poly-core-benchmark:
+    name: poly_core large-expression benchmark (non-blocking)
+    continue-on-error: true
+    needs: format-check
+    # M4-GATE exit criteria: a large-expression benchmark recorded as a
+    # baseline. Non-blocking (perf tracking, not a per-commit correctness
+    # gate, same rationale as fuzz-parser above) - runs the hidden
+    # `[!benchmark]`-tagged Catch2 BENCHMARK cases in
+    # test_large_expression_benchmark.cc explicitly (excluded from the
+    # default ctest run, same convention as numerica_core's BigInt
+    # benchmarks from M1) and logs timings for a human to compare across
+    # runs; -DCMAKE_BUILD_TYPE=Release since Debug timings aren't
+    # representative, --benchmark-samples 10 to keep this well under the
+    # ~1 minute fuzz-parser budget above.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install GMP/MPFR
+        run: sudo apt-get update && sudo apt-get install -y libgmp-dev libmpfr-dev
+      - name: Configure
+        run: cmake -S . -B build/bench -DCMAKE_BUILD_TYPE=Release
+      - name: Build
+        run: cmake --build build/bench --target poly_core_tests
+      - name: Benchmark
+        run: >
+          ./build/bench/test/poly_core/poly_core_tests "[large_expression]"
+          --benchmark-samples 10
+
   sanitizer-asan:
     name: linux-asan-ubsan (blocking)
     needs: format-check
