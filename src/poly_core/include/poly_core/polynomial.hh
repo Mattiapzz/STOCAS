@@ -161,6 +161,49 @@ public:
     return max_exponent;
   }
 
+  /// @brief The coefficient of `variables()[var_index] ^ degree_in(var_index)`
+  /// in `*this`, as a polynomial over the variable list with
+  /// `variables()[var_index]` removed entirely (arity reduced by 1 - unlike
+  /// evaluate(), which keeps the full variable list with that slot frozen
+  /// at 0). Used by multivariate_gcd.hh to predict the GCD's leading
+  /// coefficient in the main variable before eliminating the others (the
+  /// "leading coefficient problem" - see that file's header comment).
+  /// @throws std::out_of_range if @p var_index >= variables().size().
+  [[nodiscard]] MultivariatePolynomial leading_coefficient_in(std::size_t var_index) const {
+    if (var_index >= variables_.size()) {
+      throw std::out_of_range(
+          "MultivariatePolynomial::leading_coefficient_in: var_index out of range");
+    }
+    Exponent target_degree = degree_in(var_index);
+    std::vector<symbol_table::Symbol> reduced_variables;
+    reduced_variables.reserve(variables_.size() - 1);
+    for (std::size_t i = 0; i < variables_.size(); ++i) {
+      if (i != var_index) {
+        reduced_variables.push_back(variables_[i]);
+      }
+    }
+    MultivariatePolynomial result(*ring_, reduced_variables);
+    // Every surviving term already agrees on the removed coordinate
+    // (== target_degree), so dropping that column preserves the relative
+    // lexicographic order of terms_ - no re-sort or dedup needed (two
+    // originally-distinct monomials can't collide after dropping a
+    // coordinate they already agreed on).
+    for (const Term& term : terms_) {
+      if (term.first.exponent(var_index) != target_degree) {
+        continue;
+      }
+      std::vector<Exponent> exponents;
+      exponents.reserve(reduced_variables.size());
+      for (std::size_t i = 0; i < variables_.size(); ++i) {
+        if (i != var_index) {
+          exponents.push_back(term.first.exponent(i));
+        }
+      }
+      result.terms_.emplace_back(Monomial(std::move(exponents)), term.second);
+    }
+    return result;
+  }
+
   /// @brief Substitutes variable @p var_index with the constant
   /// @p value, folding it into each term's coefficient. The variable list
   /// is unchanged - the result's monomials simply always have exponent 0
