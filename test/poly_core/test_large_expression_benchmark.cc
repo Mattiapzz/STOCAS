@@ -75,13 +75,21 @@ TEST_CASE("large sparse polynomial multiplication and gcd benchmarks",
   // succeeds without hitting multivariate_gcd.hh's documented residual
   // limitation (see test_gcd_properties.cc) - the benchmark measures
   // steady-state performance, not that known, separately-tracked gap.
+  // std::uniform_int_distribution's algorithm is implementation-defined, so
+  // the same std::mt19937_64 seed yields a different draw sequence on
+  // libstdc++ vs. libc++ - a low attempt count that happens to work on one
+  // standard library can exhaust itself on another (observed: 20 attempts
+  // sufficed on macOS/libc++ but all failed on Linux/libstdc++). Use a much
+  // larger attempt budget, and smaller/lower-degree inputs (less prone to
+  // triggering the residual limitation in the first place), so the search
+  // succeeds reliably across standard libraries.
   Poly a(field, vars);
   Poly b(field, vars);
   bool found = false;
-  for (int seed_attempt = 0; seed_attempt < 20 && !found; ++seed_attempt) {
-    Poly shared = random_dense_polynomial(field, vars, rng, 20, 4, 10);
-    Poly candidate_a = shared * random_dense_polynomial(field, vars, rng, 20, 4, 10);
-    Poly candidate_b = shared * random_dense_polynomial(field, vars, rng, 20, 4, 10);
+  for (int seed_attempt = 0; seed_attempt < 200 && !found; ++seed_attempt) {
+    Poly shared = random_dense_polynomial(field, vars, rng, 15, 3, 10);
+    Poly candidate_a = shared * random_dense_polynomial(field, vars, rng, 15, 3, 10);
+    Poly candidate_b = shared * random_dense_polynomial(field, vars, rng, 15, 3, 10);
     try {
       [[maybe_unused]] Poly probe = rational_multivariate_gcd(field, candidate_a, candidate_b);
       a = candidate_a;
