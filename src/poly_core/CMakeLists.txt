@@ -11,12 +11,12 @@ target_include_directories(
 
 target_compile_features(poly_core PUBLIC cxx_std_20)
 
-# algebra_core (Ring/Field concepts, ring-struct coefficient types) and
-# symbol_table (variable identifiers) are PUBLIC: polynomial.hh/
-# univariate_gcd.hh are templates whose public API exposes both directly.
+# algebra_core (Ring/Field concepts, ring-struct coefficient types),
+# symbol_table (variable identifiers), and atom_core (atom_conversion.hh's
+# public API exposes Atom/AtomView/AtomStore directly) are PUBLIC.
 target_link_libraries(
   poly_core
-  PUBLIC stocas::algebra_core stocas::symbol_table
+  PUBLIC stocas::algebra_core stocas::symbol_table stocas::atom_core
   PRIVATE $<BUILD_INTERFACE:stocas::project_options> $<BUILD_INTERFACE:stocas::sanitizers>)
 
 include(GNUInstallDirs)

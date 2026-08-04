@@ -4,4 +4,5 @@ stocas_add_catch_test(
   NAME poly_core_tests
   SOURCES ${poly_core_test_sources}
   LINK_LIBRARIES stocas::poly_core stocas::algebra_core stocas::numerica_core stocas::symbol_table
+                 stocas::atom_core
   LABELS poly_core)
