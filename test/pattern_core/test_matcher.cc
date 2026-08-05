@@ -17,6 +17,11 @@ namespace {
 symbol_table::Symbol test_symbol(const char* name) {
   return get_symbol("pattern_core_tests", name);
 }
+
+atom_core::AtomView bound_atom(const pattern_core::MatchBindings& bindings,
+                               symbol_table::Symbol wc) {
+  return std::get<atom_core::AtomView>(bindings.at(wc));
+}
 } // namespace
 
 TEST_CASE("match: literal Num/Var leaves", "[pattern_core][matcher]") {
@@ -42,12 +47,12 @@ TEST_CASE("match: a bare wildcard matches anything and binds it", "[pattern_core
   auto result_num = match(pattern.view(), target_num.view());
   REQUIRE(result_num.has_value());
   REQUIRE(result_num->size() == 1);
-  REQUIRE(result_num->at(wc) == target_num.view());
+  REQUIRE(bound_atom(*result_num, wc) == target_num.view());
 
   Atom target_var = store.var(y);
   auto result_var = match(pattern.view(), target_var.view());
   REQUIRE(result_var.has_value());
-  REQUIRE(result_var->at(wc) == target_var.view());
+  REQUIRE(bound_atom(*result_var, wc) == target_var.view());
 }
 
 TEST_CASE("match: repeated wildcard requires a consistent binding", "[pattern_core][matcher]") {
@@ -66,7 +71,7 @@ TEST_CASE("match: repeated wildcard requires a consistent binding", "[pattern_co
   Atom target_same = store.fun(f, same_args);
   auto result_same = match(pattern.view(), target_same.view());
   REQUIRE(result_same.has_value());
-  REQUIRE(result_same->at(wc) == five.view());
+  REQUIRE(bound_atom(*result_same, wc) == five.view());
 
   std::array<Atom, 2> different_args{five, six};
   Atom target_different = store.fun(f, different_args);
@@ -91,7 +96,7 @@ TEST_CASE("match: Fun requires the same head and argument count, args matched po
   Atom target_match = store.fun(f, matching_args);
   auto result = match(pattern.view(), target_match.view());
   REQUIRE(result.has_value());
-  REQUIRE(result->at(wc) == seven.view());
+  REQUIRE(bound_atom(*result, wc) == seven.view());
 
   // Different head.
   std::array<Atom, 2> other_head_args{seven, vy};
@@ -124,7 +129,7 @@ TEST_CASE("match: Pow preserves base/exponent order (non-commutative, no ambigui
   Atom target = store.pow(vy, two);
   auto result = match(pattern.view(), target.view());
   REQUIRE(result.has_value());
-  REQUIRE(result->at(wc) == vy.view());
+  REQUIRE(bound_atom(*result, wc) == vy.view());
 
   // Exponent doesn't match.
   Atom three = store.num(Rational(3));
@@ -132,11 +137,7 @@ TEST_CASE("match: Pow preserves base/exponent order (non-commutative, no ambigui
   REQUIRE_FALSE(match(pattern.view(), target_wrong_exponent.view()).has_value());
 }
 
-TEST_CASE("match: a wildcard alongside a Num sibling inside Add - a case where positional "
-          "matching is known to be correct even though this matcher doesn't yet implement "
-          "general commutative matching (see matcher.hh's file comment): AtomStore::add() "
-          "always sorts Num children before Var children, so the wildcard's Add position "
-          "doesn't depend on what it ends up binding to, as long as that's not itself a Num.",
+TEST_CASE("match: Add is commutative - a wildcard binds regardless of canonical child order",
           "[pattern_core][matcher]") {
   AtomStore store;
   symbol_table::Symbol wc = test_symbol("w_add_");
@@ -153,7 +154,7 @@ TEST_CASE("match: a wildcard alongside a Num sibling inside Add - a case where p
 
   auto result = match(pattern.view(), target.view());
   REQUIRE(result.has_value());
-  REQUIRE(result->at(wc) == vy.view());
+  REQUIRE(bound_atom(*result, wc) == vy.view());
 }
 
 TEST_CASE("match: bindings accumulate across a threaded match, mismatches leave earlier "
@@ -173,7 +174,7 @@ TEST_CASE("match: bindings accumulate across a threaded match, mismatches leave 
   // established bindings threaded in, succeeds and keeps the binding.
   auto second = match(wildcard.view(), target_value.view(), *first);
   REQUIRE(second.has_value());
-  REQUIRE(second->at(wc) == target_value.view());
+  REQUIRE(bound_atom(*second, wc) == target_value.view());
 
   // Re-matching against a different value, with those bindings threaded
   // in, fails - the wildcard is already bound.

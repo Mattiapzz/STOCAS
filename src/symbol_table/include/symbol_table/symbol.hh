@@ -5,6 +5,7 @@
 #include <span>
 #include <string>
 #include <string_view>
+#include <vector>
 
 /// @file
 /// @brief Process-wide, append-only symbol table: interned `Symbol` handles,
@@ -86,6 +87,10 @@ private:
 /// @return The fully-qualified `"namespace::name"` string a symbol was
 ///         registered under.
 [[nodiscard]] std::string symbol_name(Symbol symbol);
+
+/// @return The attribute set @p symbol was registered with (empty if none
+///         were given to get_symbol()).
+[[nodiscard]] std::vector<SymbolAttribute> symbol_attributes(Symbol symbol);
 
 } // namespace symbol_table
 
