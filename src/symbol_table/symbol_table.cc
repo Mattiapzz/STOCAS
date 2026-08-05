@@ -180,4 +180,8 @@ std::string symbol_name(Symbol symbol) {
   return GlobalTable::instance().read().entries.at(symbol.id()).qualified_name;
 }
 
+std::vector<SymbolAttribute> symbol_attributes(Symbol symbol) {
+  return GlobalTable::instance().read().entries.at(symbol.id()).attributes;
+}
+
 } // namespace symbol_table
