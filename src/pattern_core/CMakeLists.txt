@@ -11,12 +11,18 @@ target_include_directories(
 
 target_compile_features(pattern_core PUBLIC cxx_std_20)
 
+# parallel_rewrite.cc uses std::thread directly, which needs explicit
+# Threads::Threads linkage on some platforms (notably Linux/glibc) - same
+# rationale as test/symbol_table/CMakeLists.txt's identical find_package.
+find_package(Threads REQUIRED)
+
 # atom_core (AtomView is matched against) and symbol_table (wildcard
 # symbols) are PUBLIC - both appear in matcher.hh's public API.
 target_link_libraries(
   pattern_core
   PUBLIC stocas::atom_core stocas::symbol_table
-  PRIVATE $<BUILD_INTERFACE:stocas::project_options> $<BUILD_INTERFACE:stocas::sanitizers>)
+  PRIVATE Threads::Threads $<BUILD_INTERFACE:stocas::project_options>
+          $<BUILD_INTERFACE:stocas::sanitizers>)
 
 include(GNUInstallDirs)
 install(TARGETS pattern_core EXPORT pattern_coreTargets)
