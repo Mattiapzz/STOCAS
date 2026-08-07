@@ -47,6 +47,19 @@
 /// sequence-wildcard child in a single `Add`/`Mul`/`Fun` argument list (an
 /// ambiguous partitioning problem this matcher doesn't attempt to solve).
 ///
+/// **Known, documented limitation** (found by fuzz_matcher.cc, a libFuzzer
+/// timeout rather than a crash): the commutative multiset search's
+/// backtracking is worst-case combinatorial in the number of ambiguous
+/// wildcard siblings within one `Add`/`Mul`/Symmetric-`Fun` argument list
+/// (ambiguous meaning "can match more than one not-yet-consumed target
+/// child"). `matcher.cc`'s `kMaxCommutativeAssignmentAttempts` bounds the
+/// total search effort so this can never hang; once exhausted, match()
+/// reports no match rather than continuing to backtrack - a pattern with
+/// enough ambiguous siblings may therefore fail to find a match that
+/// technically exists. This never affects the common case (few wildcards
+/// per argument list), which is exactly why the fuzzer needed depth-4
+/// random trees with several sibling wildcards to surface it at all.
+///
 /// Not yet implemented (left for a later pattern_core task):
 /// `SymbolAttribute::Antisymmetric`/`Linear` have no special matching
 /// behavior yet (a `Fun` with either is matched positionally, same as an

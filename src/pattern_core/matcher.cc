@@ -75,6 +75,18 @@ split_sequence_wildcard(const std::vector<AtomView>& pattern_children) {
 
 std::optional<MatchBindings> match_impl(AtomView pattern, AtomView target, MatchBindings bindings);
 
+// Backtracking multiset assignment (see assign_normals() below) is
+// worst-case combinatorial: several ambiguous wildcard siblings (each of
+// which can match any not-yet-consumed pool element) force trying most
+// permutations before failing, which is factorial in the sibling count.
+// Found by fuzz_matcher.cc as a libFuzzer timeout, not a crash - bounding
+// the total number of match_impl() probes the search may spend keeps
+// worst-case work finite (documented, deliberate trade-off: an
+// adversarial pattern with enough ambiguous siblings may report "no
+// match" for a target it would technically match given unlimited search,
+// rather than ever hanging).
+constexpr std::size_t kMaxCommutativeAssignmentAttempts = 200000;
+
 // Binds (or checks consistency of) a sequence wildcard's capture.
 std::optional<MatchBindings> bind_sequence(const SequenceWildcard& sequence,
                                            std::vector<AtomView> captured,
@@ -98,12 +110,16 @@ std::optional<MatchBindings> bind_sequence(const SequenceWildcard& sequence,
 // `normals` against a distinct element of `pool` (order-independent).
 // `used` is mutated in place to mark which pool indices were consumed by a
 // successful assignment (left in its pre-call state, all false, on
-// failure).
+// failure). `attempts_remaining` bounds the total number of match_impl()
+// probes across the whole search (see kMaxCommutativeAssignmentAttempts);
+// once exhausted, the search gives up and reports no match rather than
+// continuing to backtrack.
 std::optional<MatchBindings> assign_normals(const std::vector<AtomView>& normals,
                                             std::size_t normal_index,
                                             const std::vector<AtomView>& pool,
                                             std::vector<bool>& used,
-                                            MatchBindings bindings) {
+                                            MatchBindings bindings,
+                                            std::size_t& attempts_remaining) {
   if (normal_index == normals.size()) {
     return bindings;
   }
@@ -111,13 +127,17 @@ std::optional<MatchBindings> assign_normals(const std::vector<AtomView>& normals
     if (used[i]) {
       continue;
     }
+    if (attempts_remaining == 0) {
+      return std::nullopt;
+    }
+    --attempts_remaining;
     std::optional<MatchBindings> attempt = match_impl(normals[normal_index], pool[i], bindings);
     if (!attempt.has_value()) {
       continue;
     }
     used[i] = true;
-    std::optional<MatchBindings> result =
-        assign_normals(normals, normal_index + 1, pool, used, std::move(*attempt));
+    std::optional<MatchBindings> result = assign_normals(
+        normals, normal_index + 1, pool, used, std::move(*attempt), attempts_remaining);
     if (result.has_value()) {
       return result;
     }
@@ -141,8 +161,9 @@ std::optional<MatchBindings> match_commutative(const std::vector<AtomView>& patt
   }
 
   std::vector<bool> used(target_children.size(), false);
+  std::size_t attempts_remaining = kMaxCommutativeAssignmentAttempts;
   std::optional<MatchBindings> assigned =
-      assign_normals(normals, 0, target_children, used, std::move(bindings));
+      assign_normals(normals, 0, target_children, used, std::move(bindings), attempts_remaining);
   if (!assigned.has_value()) {
     return std::nullopt;
   }
