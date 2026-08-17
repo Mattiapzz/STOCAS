@@ -49,6 +49,10 @@ public:
 
   [[nodiscard]] std::string to_string() const;
 
+  /// @return `numerator() / denominator()` rounded to the nearest `double`
+  ///         - see `BigInt::to_double()`'s precision caveat.
+  [[nodiscard]] double to_double() const;
+
   /// @brief Rational reconstruction: recovers p/q from a residue r modulo m,
   /// via the extended Euclidean algorithm, given |p|, q <= bound.
   ///

@@ -20,6 +20,17 @@ concept DualScalar = requires(const F& a, const F& b) {
   { F::log(a) } -> std::same_as<F>;
 } && std::constructible_from<F, double>;
 
+/// @brief `DualScalar` plus `sin`/`cos`, needed by `HyperDual<F,
+/// Order>::sin()`/`cos()` (and hence `calculus_core`'s series expansion of
+/// trig functions). Kept separate from `DualScalar` rather than folded
+/// into it, so a scalar type without `sin`/`cos` can still be used for
+/// every other `Dual`/`HyperDual` operation.
+template <typename F>
+concept TrigDualScalar = DualScalar<F> && requires(const F& a) {
+  { F::sin(a) } -> std::same_as<F>;
+  { F::cos(a) } -> std::same_as<F>;
+};
+
 /// @brief A dual number a + b*epsilon (epsilon^2 == 0), carrying a value and
 /// its first derivative through arithmetic via the chain rule.
 template <DualScalar F> class Dual {

@@ -36,6 +36,8 @@ public:
   /// small |x| (delegates to std::expm1).
   [[nodiscard]] static F64 expm1(const F64& x);
   [[nodiscard]] static F64 log(const F64& x);
+  [[nodiscard]] static F64 sin(const F64& x);
+  [[nodiscard]] static F64 cos(const F64& x);
 
 private:
   double value_;
@@ -78,6 +80,8 @@ public:
   /// |x| where naive exp(x) - 1 suffers catastrophic cancellation.
   [[nodiscard]] static Float expm1(const Float& x);
   [[nodiscard]] static Float log(const Float& x);
+  [[nodiscard]] static Float sin(const Float& x);
+  [[nodiscard]] static Float cos(const Float& x);
 
 private:
   struct Impl;

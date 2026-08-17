@@ -1,3 +1,5 @@
+#include <cmath>
+
 #include <numerica_core/float_types.hh>
 
 #include <catch2/catch_approx.hpp>
@@ -13,6 +15,12 @@ TEST_CASE("F64 basic arithmetic", "[numerica_core][float_types]") {
   REQUIRE((a - b).to_double() == Catch::Approx(-1.0));
   REQUIRE((a * b).to_double() == Catch::Approx(12.0));
   REQUIRE((b / a).to_double() == Catch::Approx(4.0 / 3.0));
+}
+
+TEST_CASE("F64 sin/cos", "[numerica_core][float_types]") {
+  const F64 x(0.5);
+  REQUIRE(F64::sin(x).to_double() == Catch::Approx(std::sin(0.5)));
+  REQUIRE(F64::cos(x).to_double() == Catch::Approx(std::cos(0.5)));
 }
 
 TEST_CASE("F64 expm1 avoids cancellation that naive exp(x)-1 suffers",

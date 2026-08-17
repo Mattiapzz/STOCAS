@@ -121,6 +121,13 @@ std::string BigInt::to_string() const {
   return result;
 }
 
+double BigInt::to_double() const {
+  if (is_small_) {
+    return static_cast<double>(small_value_);
+  }
+  return mpz_get_d(big().value);
+}
+
 namespace {
 
 // Detects int64_t add/sub/mul overflow without invoking UB, per operation.

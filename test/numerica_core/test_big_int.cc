@@ -33,6 +33,14 @@ TEST_CASE("BigInt promotes above int64_t range", "[numerica_core][big_int]") {
   REQUIRE(doubled.to_string() == "200000000000000000000000000000");
 }
 
+TEST_CASE("BigInt::to_double converts both the small and promoted representations",
+          "[numerica_core][big_int]") {
+  REQUIRE(BigInt(42).to_double() == 42.0);
+  REQUIRE(BigInt(-7).to_double() == -7.0);
+  const BigInt huge("100000000000000000000000000000"); // 10^29
+  REQUIRE(huge.to_double() == 1e29);
+}
+
 TEST_CASE("BigInt promotes exactly at the int64_t multiply overflow boundary",
           "[numerica_core][big_int]") {
   const BigInt max_i64("9223372036854775807");

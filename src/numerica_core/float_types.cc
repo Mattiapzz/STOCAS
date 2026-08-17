@@ -28,6 +28,14 @@ F64 F64::log(const F64& x) {
   return F64(std::log(x.value_));
 }
 
+F64 F64::sin(const F64& x) {
+  return F64(std::sin(x.value_));
+}
+
+F64 F64::cos(const F64& x) {
+  return F64(std::cos(x.value_));
+}
+
 // -------------------------------------------------------------- Float ----
 
 struct Float::Impl {
@@ -162,6 +170,18 @@ Float Float::expm1(const Float& x) {
 Float Float::log(const Float& x) {
   Float result(x.precision_bits());
   mpfr_log(result.impl_->value, x.impl_->value, MPFR_RNDN);
+  return result;
+}
+
+Float Float::sin(const Float& x) {
+  Float result(x.precision_bits());
+  mpfr_sin(result.impl_->value, x.impl_->value, MPFR_RNDN);
+  return result;
+}
+
+Float Float::cos(const Float& x) {
+  Float result(x.precision_bits());
+  mpfr_cos(result.impl_->value, x.impl_->value, MPFR_RNDN);
   return result;
 }
 
