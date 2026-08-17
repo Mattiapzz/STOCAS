@@ -108,6 +108,10 @@ std::strong_ordering Rational::operator<=>(const Rational& other) const {
   return (numerator_ * other.denominator_) <=> (other.numerator_ * denominator_);
 }
 
+double Rational::to_double() const {
+  return numerator_.to_double() / denominator_.to_double();
+}
+
 std::string Rational::to_string() const {
   if (denominator_ == BigInt(1)) {
     return numerator_.to_string();

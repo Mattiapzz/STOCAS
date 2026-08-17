@@ -43,6 +43,13 @@ public:
   /// @return The base-10 string representation of this value.
   [[nodiscard]] std::string to_string() const;
 
+  /// @return This value rounded to the nearest representable `double`
+  ///         (ties to even), for interop with floating-point code (e.g.
+  ///         `calculus_core`'s series-expansion automatic-differentiation
+  ///         path) - not exact for values outside a double's ~15-17
+  ///         significant decimal digits.
+  [[nodiscard]] double to_double() const;
+
   [[nodiscard]] BigInt operator+(const BigInt& other) const;
   [[nodiscard]] BigInt operator-(const BigInt& other) const;
   [[nodiscard]] BigInt operator*(const BigInt& other) const;

@@ -28,6 +28,13 @@ TEST_CASE("Rational rejects zero denominator", "[numerica_core][rational]") {
   REQUIRE_THROWS_AS(Rational(BigInt(1), BigInt(0)), std::domain_error);
 }
 
+TEST_CASE("Rational::to_double converts numerator/denominator to a double",
+          "[numerica_core][rational]") {
+  REQUIRE(Rational(BigInt(1), BigInt(4)).to_double() == 0.25);
+  REQUIRE(Rational(BigInt(-3), BigInt(2)).to_double() == -1.5);
+  REQUIRE(Rational(BigInt(5)).to_double() == 5.0);
+}
+
 TEST_CASE("Rational arithmetic", "[numerica_core][rational]") {
   const Rational half(BigInt(1), BigInt(2));
   const Rational third(BigInt(1), BigInt(3));
